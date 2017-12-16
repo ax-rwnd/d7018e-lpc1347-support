@@ -32,6 +32,10 @@ app! {
         CT16B0: {
             path: clock0_tick,
             resources: [GPIO_PORT, ON],
+        },
+        CT16B1: {
+            path: clock1_tick,
+            resources: [GPIO_PORT, ON],
         }
     }
 }
@@ -43,22 +47,20 @@ fn init(p: init::Peripherals, r: init::Resources) {
     }
 
     gpio::init(&p);
-    timers::init(&p, Timer16::Timer0);
-    if (timers::set_enabled(&p, Timer16::Timer0, true)) {
-        let mut stdout = hio::hstdout().unwrap();
-        let _ = writeln!(stdout, "Enabled clock 0");
-    } else {
-        let mut stdout = hio::hstdout().unwrap();
-        let _ = writeln!(stdout, "Clock 0 was not set.");
-    }
-    unsafe {
-        timers::set_match(&p, Timer16::Timer0, MatchReg::Reg0, 2u16);
-        timers::set_match(&p, Timer16::Timer0, MatchReg::Reg1, 4u16);
-        timers::set_match(&p, Timer16::Timer0, MatchReg::Reg2, 4u16);
-        timers::set_match(&p, Timer16::Timer0, MatchReg::Reg3, 4u16);
-    }
 
+    // Clock 0 setup
     timers::reset(&p, Timer16::Timer0);
+    timers::init(&p, Timer16::Timer0);
+    timers::set_interrupt(&p, Timer16::Timer0, MatchReg::Reg0, true);
+    timers::set_enabled(&p, Timer16::Timer0, true);
+    unsafe { timers::set_match(&p, Timer16::Timer0, MatchReg::Reg0, 2u16); }
+
+    // Clock 1 setup
+    timers::reset(&p, Timer16::Timer1);
+    timers::init(&p, Timer16::Timer1);
+    timers::set_interrupt(&p, Timer16::Timer1, MatchReg::Reg0, true);
+    timers::set_enabled(&p, Timer16::Timer1, true);
+    unsafe { timers::set_match(&p, Timer16::Timer1, MatchReg::Reg0, 2u16); }
 
     {
         let div: u8 = p.SYSCON.sysahbclkdiv.read().div().bits();
@@ -78,6 +80,11 @@ fn sys_tick(_t: &mut Threshold, r: SYS_TICK::Resources) {
 
 fn clock0_tick(_t: &mut Threshold, r: CT16B0::Resources) {
     let mut stdout = hio::hstdout().unwrap();
-    let _ = writeln!(stdout, "Clock!");
+    let _ = writeln!(stdout, "Clock 0!");
     r.GPIO_PORT.not0.write(|w| w.notp7().bit(true));
+}
+
+fn clock1_tick(_t: &mut Threshold, r: CT16B1::Resources) {
+    let mut stdout = hio::hstdout().unwrap();
+    let _ = writeln!(stdout, "Clock 1!");
 }
