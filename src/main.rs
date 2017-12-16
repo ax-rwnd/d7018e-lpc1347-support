@@ -1,3 +1,4 @@
+#![deny(overflowing_literals)]
 #![feature(proc_macro)]
 #![no_std]
 
@@ -7,6 +8,14 @@ extern crate cortex_m_semihosting;
 extern crate lpc1347;
 
 use rtfm::{app, Threshold, wfi};
+use cortex_m_semihosting::hio;
+use core::fmt::Write;
+
+mod gpio;
+
+mod timers;
+use timers::Timer16;
+use timers::MatchReg;
 
 app! {
     device: lpc1347,
@@ -18,12 +27,44 @@ app! {
     tasks: {
         SYS_TICK: {
             path: sys_tick,
-            resources: [GPIO_PORT, ON],
+            resources: [ON],
         },
+        CT16B0: {
+            path: clock0_tick,
+            resources: [GPIO_PORT, ON],
+        }
     }
 }
 
 fn init(p: init::Peripherals, r: init::Resources) {
+    {
+        let mut stdout = hio::hstdout().unwrap();
+        let _ = writeln!(stdout, "Initializing...");
+    }
+
+    gpio::init(&p);
+    timers::init(&p, Timer16::Timer0);
+    if (timers::set_enabled(&p, Timer16::Timer0, true)) {
+        let mut stdout = hio::hstdout().unwrap();
+        let _ = writeln!(stdout, "Enabled clock 0");
+    } else {
+        let mut stdout = hio::hstdout().unwrap();
+        let _ = writeln!(stdout, "Clock 0 was not set.");
+    }
+    unsafe {
+        timers::set_match(&p, Timer16::Timer0, MatchReg::Reg0, 2u16);
+        timers::set_match(&p, Timer16::Timer0, MatchReg::Reg1, 4u16);
+        timers::set_match(&p, Timer16::Timer0, MatchReg::Reg2, 4u16);
+        timers::set_match(&p, Timer16::Timer0, MatchReg::Reg3, 4u16);
+    }
+
+    timers::reset(&p, Timer16::Timer0);
+
+    {
+        let div: u8 = p.SYSCON.sysahbclkdiv.read().div().bits();
+        let mut stdout = hio::hstdout().unwrap();
+        let _ = writeln!(stdout, "Done {}", div);
+    }
 }
 
 fn idle() -> ! {
@@ -33,4 +74,10 @@ fn idle() -> ! {
 }
 
 fn sys_tick(_t: &mut Threshold, r: SYS_TICK::Resources) {
+}
+
+fn clock0_tick(_t: &mut Threshold, r: CT16B0::Resources) {
+    let mut stdout = hio::hstdout().unwrap();
+    let _ = writeln!(stdout, "Clock!");
+    r.GPIO_PORT.not0.write(|w| w.notp7().bit(true));
 }
