@@ -46,6 +46,8 @@ pub fn init(p: &lpc1347::Peripherals, timer: Timer16) {
                 T16_0_COUNTER = [0u8,0u8,0u8,0u8];
                 T16_0_CAPTURE = [0u8,0u8,0u8,0u8];
             }
+
+            p.NVIC.enable(CT16B0);
         }
         Timer16::Timer1 => {
             p.SYSCON.sysahbclkctrl.modify(|_, w| w.ct16b1().bit(true));
@@ -54,6 +56,8 @@ pub fn init(p: &lpc1347::Peripherals, timer: Timer16) {
                 T16_1_COUNTER = [0u8,0u8,0u8,0u8];
                 T16_1_CAPTURE = [0u8,0u8,0u8,0u8];
             }
+
+            p.NVIC.enable(CT16B1);
         }
     }
 }
@@ -98,27 +102,13 @@ pub fn set_interrupt(p: &Peripherals, timer: Timer16, mr: MatchReg, enabled: boo
 }
 
 /// Enable or disable 16-bit timers
-pub fn set_enabled(p: &lpc1347::Peripherals, timer: Timer16, enabled: bool) -> bool {
+pub fn set_enabled(p: &lpc1347::Peripherals, timer: Timer16, enabled: bool) {
     match timer {
         Timer16::Timer0 => {
-            p.CT16B0.tcr.modify(|_, w| w.cen().bit(enabled));
-
-            if enabled {
-                p.NVIC.enable(CT16B0);
-            } else {
-                p.NVIC.disable(CT16B0);
-            }
-            return p.NVIC.is_enabled(CT16B0);
+            p.CT16B0.tcr.write(|w| w.cen().bit(enabled));
         }
         Timer16::Timer1 => {
-            p.CT16B1.tcr.modify(|_, w| w.cen().bit(enabled));
-
-            if enabled {
-                p.NVIC.enable(CT16B1);
-            } else {
-                p.NVIC.disable(CT16B1);
-            }
-            return p.NVIC.is_enabled(CT16B1);
+            p.CT16B1.tcr.write(|w| w.cen().bit(enabled));
         }
     }
 }
@@ -174,23 +164,50 @@ pub unsafe fn set_match(p: &lpc1347::Peripherals, timer: Timer16, reg: MatchReg,
     }
 }
 
-/// Setup a clock to be used for PWM
-pub fn set_pwm(p: &Peripherals, timer: Timer16) {
-    // TODO: untested
-    set_enabled(&p, timer, false);
-
+/// Set the prescaler register
+pub unsafe fn set_prescaler(p: &Peripherals, timer: Timer16, value: u16) {
     match timer {
         Timer16::Timer0 => {
-            p.CT16B0.tcr.modify(|_, w| w.cen().bit(true));
+            p.CT16B0.pr.modify(|_, w| w.pcval().bits(value));
+        }
+        Timer16::Timer1 => {
+            p.CT16B1.pr.modify(|_, w| w.pcval().bits(value));
+        }
+    }
+}
 
-            p.CT16B0.emr.modify(|_, w| w.emc3().bits(0b01));
-            p.CT16B0.emr.modify(|_, w| w.emc2().bits(0b01));
-            p.CT16B0.emr.modify(|_, w| w.emc1().bits(0b01));
-            p.CT16B0.emr.modify(|_, w| w.emc0().bits(0b01));
+/// Setup a clock to be used for PWM
+pub fn set_pwm(p: &Peripherals, timer: Timer16, m0: u16, m1: u16, m2: u16, m3: u16) {
+    match timer {
+        Timer16::Timer0 => {
 
+            set_enabled(&p, timer, false);
+            p.SYSCON.sysahbclkctrl.modify(|_, w| w.ct16b0().bit(true));
+
+            p.CT16B0.emr.modify(|_, w| w.emc3().bits(0x3));
+            p.CT16B0.emr.modify(|_, w| w.emc2().bits(0x3));
+            p.CT16B0.emr.modify(|_, w| w.emc1().bits(0x3));
+            p.CT16B0.emr.modify(|_, w| w.emc0().bits(0x3));
+
+            p.CT16B0.emr.modify(|_, w| w.em3().bit(true));
+            p.CT16B0.emr.modify(|_, w| w.em2().bit(true));
+            p.CT16B0.emr.modify(|_, w| w.em1().bit(true));
+            p.CT16B0.emr.modify(|_, w| w.em0().bit(true));
+
+            p.CT16B0.pwmc.modify(|_, w| w.pwmen3().bit(true));
+            p.CT16B0.pwmc.modify(|_, w| w.pwmen2().bit(true));
+            p.CT16B0.pwmc.modify(|_, w| w.pwmen1().bit(true));
             p.CT16B0.pwmc.modify(|_, w| w.pwmen0().bit(true));
 
-            reset(&p, timer);
+            unsafe {
+                set_match(&p, Timer16::Timer0, MatchReg::Reg0, m0);
+                set_match(&p, Timer16::Timer0, MatchReg::Reg1, m1);
+                set_match(&p, Timer16::Timer0, MatchReg::Reg2, m2);
+                set_match(&p, Timer16::Timer0, MatchReg::Reg3, m3);
+            }
+
+            // Reset on clock 0 -> period
+            p.CT16B0.mcr.write(|w| w.mr0r().bit(true));
         }
 
         Timer16::Timer1 => {
@@ -200,6 +217,13 @@ pub fn set_pwm(p: &Peripherals, timer: Timer16) {
             p.CT16B1.emr.modify(|_, w| w.emc2().bits(0b01));
             p.CT16B1.emr.modify(|_, w| w.emc1().bits(0b01));
             p.CT16B1.emr.modify(|_, w| w.emc0().bits(0b01));
+
+            unsafe {
+                set_match(&p, Timer16::Timer1, MatchReg::Reg0, m0);
+                set_match(&p, Timer16::Timer1, MatchReg::Reg1, m1);
+                set_match(&p, Timer16::Timer1, MatchReg::Reg2, m2);
+                set_match(&p, Timer16::Timer1, MatchReg::Reg3, m3);
+            }
 
             p.CT16B1.pwmc.modify(|_, w| w.pwmen0().bit(true));
 
