@@ -69,6 +69,7 @@ pub fn set_interrupt(p: &Peripherals, timer: Timer16, mr: MatchReg, enabled: boo
             match mr {
                 MatchReg::Reg0 => {
                     p.CT16B0.mcr.modify(|_, w| w.mr0i().bit(enabled));
+                    p.CT16B0.mcr.modify(|_, w| w.mr0r().bit(enabled));
                 }
                 MatchReg::Reg1 => {
                     p.CT16B0.mcr.modify(|_, w| w.mr1i().bit(enabled));
@@ -115,6 +116,7 @@ pub fn set_enabled(p: &lpc1347::Peripherals, timer: Timer16, enabled: bool) {
 
 /// Reset a 16-bit timer
 pub fn reset(p: &lpc1347::Peripherals, timer: Timer16) {
+    // TODO: these should write 0x02, but that's reserved?
     match timer {
         Timer16::Timer0 => {
             p.CT16B0.tcr.modify(|_, w| w.crst().bit(true));
@@ -123,6 +125,11 @@ pub fn reset(p: &lpc1347::Peripherals, timer: Timer16) {
             p.CT16B1.tcr.modify(|_, w| w.crst().bit(true));
         }
     }
+}
+
+/// Cause a blocking delay for some ticks
+pub fn delay_ticks(p: &Peripherals, timer: Timer16, delau: u16) {
+    panic!("not implemented");
 }
 
 /// Set the match register
@@ -184,18 +191,18 @@ pub fn set_pwm(p: &Peripherals, timer: Timer16, m0: u16, m1: u16, m2: u16, m3: u
             set_enabled(&p, timer, false);
             p.SYSCON.sysahbclkctrl.modify(|_, w| w.ct16b0().bit(true));
 
-            p.CT16B0.emr.modify(|_, w| w.emc3().bits(0x3));
-            p.CT16B0.emr.modify(|_, w| w.emc2().bits(0x3));
-            p.CT16B0.emr.modify(|_, w| w.emc1().bits(0x3));
-            p.CT16B0.emr.modify(|_, w| w.emc0().bits(0x3));
+            p.CT16B0.emr.modify(|_, w| w.emc3().bits(0x1));
+            p.CT16B0.emr.modify(|_, w| w.emc2().bits(0x1));
+            p.CT16B0.emr.modify(|_, w| w.emc1().bits(0x1));
+            p.CT16B0.emr.modify(|_, w| w.emc0().bits(0x1));
 
-            p.CT16B0.emr.modify(|_, w| w.em3().bit(true));
-            p.CT16B0.emr.modify(|_, w| w.em2().bit(true));
+            p.CT16B0.emr.modify(|_, w| w.em3().bit(false));
+            p.CT16B0.emr.modify(|_, w| w.em2().bit(false));
             p.CT16B0.emr.modify(|_, w| w.em1().bit(true));
             p.CT16B0.emr.modify(|_, w| w.em0().bit(true));
 
-            p.CT16B0.pwmc.modify(|_, w| w.pwmen3().bit(true));
-            p.CT16B0.pwmc.modify(|_, w| w.pwmen2().bit(true));
+            p.CT16B0.pwmc.modify(|_, w| w.pwmen3().bit(false));
+            p.CT16B0.pwmc.modify(|_, w| w.pwmen2().bit(false));
             p.CT16B0.pwmc.modify(|_, w| w.pwmen1().bit(true));
             p.CT16B0.pwmc.modify(|_, w| w.pwmen0().bit(true));
 
@@ -208,6 +215,7 @@ pub fn set_pwm(p: &Peripherals, timer: Timer16, m0: u16, m1: u16, m2: u16, m3: u
 
             // Reset on clock 0 -> period
             p.CT16B0.mcr.write(|w| w.mr0r().bit(true));
+            p.CT16B0.tcr.modify(|_, w| w.cen().bit(true));
         }
 
         Timer16::Timer1 => {
