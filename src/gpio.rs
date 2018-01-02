@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 #![feature(proc_macro)]
 #![no_std]
 

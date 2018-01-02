@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 #![feature(proc_macro)]
 #![no_std]
 
@@ -218,12 +219,23 @@ pub fn set_pwm(p: &Peripherals, timer: Timer16, m0: u16, m1: u16, m2: u16, m3: u
         }
 
         Timer16::Timer1 => {
-            p.CT16B1.tcr.modify(|_, w| w.cen().bit(true));
+            set_enabled(&p, timer, false);
+            p.SYSCON.sysahbclkctrl.modify(|_, w| w.ct16b0().bit(true));
 
-            p.CT16B1.emr.modify(|_, w| w.emc3().bits(0b01));
-            p.CT16B1.emr.modify(|_, w| w.emc2().bits(0b01));
-            p.CT16B1.emr.modify(|_, w| w.emc1().bits(0b01));
-            p.CT16B1.emr.modify(|_, w| w.emc0().bits(0b01));
+            p.CT16B1.emr.modify(|_, w| w.emc3().bits(0x1));
+            p.CT16B1.emr.modify(|_, w| w.emc2().bits(0x1));
+            p.CT16B1.emr.modify(|_, w| w.emc1().bits(0x1));
+            p.CT16B1.emr.modify(|_, w| w.emc0().bits(0x1));
+
+            p.CT16B1.emr.modify(|_, w| w.em3().bit(false));
+            p.CT16B1.emr.modify(|_, w| w.em2().bit(false));
+            p.CT16B1.emr.modify(|_, w| w.em1().bit(true));
+            p.CT16B1.emr.modify(|_, w| w.em0().bit(true));
+
+            p.CT16B1.pwmc.modify(|_, w| w.pwmen3().bit(false));
+            p.CT16B1.pwmc.modify(|_, w| w.pwmen2().bit(false));
+            p.CT16B1.pwmc.modify(|_, w| w.pwmen1().bit(true));
+            p.CT16B1.pwmc.modify(|_, w| w.pwmen0().bit(true));
 
             unsafe {
                 set_match(&p, Timer16::Timer1, MatchReg::Reg0, m0);
@@ -232,9 +244,9 @@ pub fn set_pwm(p: &Peripherals, timer: Timer16, m0: u16, m1: u16, m2: u16, m3: u
                 set_match(&p, Timer16::Timer1, MatchReg::Reg3, m3);
             }
 
-            p.CT16B1.pwmc.modify(|_, w| w.pwmen0().bit(true));
+            // Reset on clock 0 -> period
+            p.CT16B1.mcr.write(|w| w.mr0r().bit(true));
 
-            reset(&p, timer.clone());
         }
     }
 }
