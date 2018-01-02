@@ -58,14 +58,14 @@ fn init(p: init::Peripherals) { //, r: init::Resources) {
     timers::set_interrupt(&p, Timer16::Timer0, MatchReg::Reg1, true);
     timers::set_enabled(&p, Timer16::Timer0, true);*/
     timers::init(&p, Timer16::Timer0);
-    timers::set_pwm(&p, Timer16::Timer0, 12000, 6000, 6000, 6000);
+    timers::set_pwm(&p, Timer16::Timer0, 4000, 3991, 1000, 1000);
     p.CT16B0.mcr.modify(|_, w| w.mr0r().bit(true));
     p.CT16B0.mcr.modify(|_, w| w.mr1r().bit(false));
     p.CT16B0.mcr.modify(|_, w| w.mr1s().bit(false));
     timers::set_enabled(&p, Timer16::Timer0, true);
     p.CT16B0.tcr.modify(|_, w| w.cen().bit(true));
     unsafe {
-        p.CT16B0.pr.modify(|_, w| w.pcval().bits(12000));
+        p.CT16B0.pr.modify(|_, w| w.pcval().bits(30));
     }
 
     // Clock 1 setup
