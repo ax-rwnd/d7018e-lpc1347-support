@@ -215,7 +215,6 @@ pub fn set_pwm(p: &Peripherals, timer: Timer16, m0: u16, m1: u16, m2: u16, m3: u
 
             // Reset on clock 0 -> period
             p.CT16B0.mcr.write(|w| w.mr0r().bit(true));
-            p.CT16B0.tcr.modify(|_, w| w.cen().bit(true));
         }
 
         Timer16::Timer1 => {
