@@ -18,7 +18,7 @@ compiletest_rs = "0.2.8"
 
 [dev-dependencies.cortex-m-rt]
 features = ["abort-on-panic"]
-version = "0.3.3"
+version = "=0.3.7"
 
 [dependencies.lpc1347]
 features = ["rt"]
