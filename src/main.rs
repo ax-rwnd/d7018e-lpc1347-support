@@ -10,6 +10,7 @@ extern crate lpc1347;
 use rtfm::{app, Threshold, wfi};
 use cortex_m_semihosting::hio;
 use core::fmt::Write;
+use lpc1347::Peripherals;
 
 mod gpio;
 
@@ -19,22 +20,29 @@ use timers::MatchReg;
 
 app! {
     device: lpc1347,
-/*
-    resources: {
-        static ON: bool = false;
-    },
+}
 
-    tasks: {
-        CT16B0: {
-            path: clock0_tick,
-            resources: [CT16B0, GPIO_PORT, ON],
-        },
-        CT16B1: {
-            path: clock1_tick,
-            resources: [CT16B1, GPIO_PORT, ON],
-        }
+fn init_pwm(p: &Peripherals) {
+    // Set pio0_9 as PWM output
+    unsafe {
+        p.IOCON.pio0_9.modify(|_, w| w.func().bits(0x2));
     }
-    */
+
+    // Set PWM match registers
+    const CYCLE: u16 = 12000;
+    timers::set_pwm(&p, Timer16::Timer0, CYCLE, CYCLE-300, 1000, 1000);
+    unsafe {
+        p.CT16B0.pr.modify(|_, w| w.pcval().bits(9));
+    }
+
+    // Configure match properties
+    // Here, mr0 determines DC and mr1 when the output goes high
+    p.CT16B0.mcr.modify(|_, w| w.mr0r().bit(true));
+    p.CT16B0.mcr.modify(|_, w| w.mr1r().bit(false));
+    p.CT16B0.mcr.modify(|_, w| w.mr1s().bit(false));
+
+    // Enable the PWM
+    timers::set_enabled(&p, Timer16::Timer0, true);
 }
 
 fn init(p: init::Peripherals) { //, r: init::Resources) {
@@ -43,53 +51,9 @@ fn init(p: init::Peripherals) { //, r: init::Resources) {
         let _ = writeln!(stdout, "Initializing...");
     }
 
+    // Configure IOCON clock
     p.SYSCON.sysahbclkctrl.modify(|_, w| w.iocon().bit(true));
-    unsafe {
-        p.IOCON.pio0_9.modify(|_, w| w.func().bits(0x2));
-    }
-
-    gpio::init(&p);
-    gpio::set_dir(&p, gpio::Port::Port0, 8, true);
-    gpio::set_dir(&p, gpio::Port::Port0, 9, true);
-
-    // Clock 0 setup
-    /*timers::init(&p, Timer16::Timer0);
-    timers::set_interrupt(&p, Timer16::Timer0, MatchReg::Reg0, true);
-    timers::set_interrupt(&p, Timer16::Timer0, MatchReg::Reg1, true);
-    timers::set_enabled(&p, Timer16::Timer0, true);*/
-    timers::init(&p, Timer16::Timer0);
-    timers::set_pwm(&p, Timer16::Timer0, 4000, 3991, 1000, 1000);
-    p.CT16B0.mcr.modify(|_, w| w.mr0r().bit(true));
-    p.CT16B0.mcr.modify(|_, w| w.mr1r().bit(false));
-    p.CT16B0.mcr.modify(|_, w| w.mr1s().bit(false));
-    timers::set_enabled(&p, Timer16::Timer0, true);
-    p.CT16B0.tcr.modify(|_, w| w.cen().bit(true));
-    unsafe {
-        p.CT16B0.pr.modify(|_, w| w.pcval().bits(30));
-    }
-
-    // Clock 1 setup
-   // timers::reset(&p, Timer16::Timer1);
-   // timers::init(&p, Timer16::Timer1);
-    //timers::set_interrupt(&p, Timer16::Timer1, MatchReg::Reg0, true);
-   // timers::set_enabled(&p, Timer16::Timer1, true);
-
-    /*unsafe {
-        p.CT16B0.pc.write(|w| w.pcval().bits(2u16));
-        //timers::set_match(&p, Timer16::Timer0, MatchReg::Reg0, 62000u16);
-        timers::set_match(&p, Timer16::Timer0, MatchReg::Reg0, 65535u16);
-        /*
-        timers::set_match(&p, Timer16::Timer0, MatchReg::Reg2, 32768);
-        timers::set_match(&p, Timer16::Timer0, MatchReg::Reg3, 32768);
-
-        p.CT16B0.emr.write(|w| w.emc0().bits(0x01));
-        p.CT16B0.emr.write(|w| w.emc1().bits(0x02));
-        */
-    }
-    timers::reset(&p, Timer16::Timer0);
-    //unsafe { timers::set_match(&p, Timer16::Timer0, MatchReg::Reg1, 16384u16); }
-    //unsafe { timers::set_match(&p, Timer16::Timer1, MatchReg::Reg1, 32768u16); }
-    */
+    init_pwm(&p);
 
     {
         let mut stdout = hio::hstdout().unwrap();
@@ -102,13 +66,3 @@ fn idle() -> ! {
         wfi();
     }
 }
-
-/*fn clock0_tick(_t: &mut Threshold, r: CT16B0::Resources) {
-    let mut stdout = hio::hstdout().unwrap();
-    let _ = writeln!(stdout, "Done {:?}", r.CT16B0.pc.read().bits());
-    r.GPIO_PORT.not0.write(|w| w.notp8().bit(true));
-}
-
-fn clock1_tick(_t: &mut Threshold, r: CT16B1::Resources) {
-    r.GPIO_PORT.not0.write(|w| w.notp9().bit(true));
-}*/

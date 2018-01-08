@@ -1,6 +1,4 @@
 #![allow(dead_code)]
-#![feature(proc_macro)]
-#![no_std]
 
 extern crate lpc1347;
 
@@ -12,7 +10,6 @@ static mut T16_1_CAPTURE: [u8; 4] = [0u8,0u8,0u8,0u8];
 use lpc1347::Peripherals;
 use lpc1347::Interrupt::CT16B0;
 use lpc1347::Interrupt::CT16B1;
-
 
 #[derive(Copy, Clone)]
 pub enum Timer16 {
@@ -129,7 +126,7 @@ pub fn reset(p: &lpc1347::Peripherals, timer: Timer16) {
 }
 
 /// Cause a blocking delay for some ticks
-pub fn delay_ticks(p: &Peripherals, timer: Timer16, delau: u16) {
+pub fn delay_ticks(_p: &Peripherals, _timer: Timer16, _delay: u16) {
     panic!("not implemented");
 }
 

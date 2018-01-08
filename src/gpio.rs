@@ -1,18 +1,9 @@
 #![allow(dead_code)]
-#![feature(proc_macro)]
-#![no_std]
 
 extern crate lpc1347;
 use lpc1347::Peripherals;
 
-use lpc1347::Interrupt::PIN_INT0;
-use lpc1347::Interrupt::PIN_INT1;
-use lpc1347::Interrupt::PIN_INT2;
-use lpc1347::Interrupt::PIN_INT3;
-use lpc1347::Interrupt::PIN_INT4;
-use lpc1347::Interrupt::PIN_INT5;
-use lpc1347::Interrupt::PIN_INT6;
-use lpc1347::Interrupt::PIN_INT7;
+use lpc1347::Interrupt::{PIN_INT0, PIN_INT1, PIN_INT2, PIN_INT3, PIN_INT4, PIN_INT5, PIN_INT6, PIN_INT7};
 
 /// Writes to a register using value and bitpos
 macro_rules! write_reg {
@@ -85,38 +76,50 @@ pub fn init(p: &lpc1347::Peripherals) {
 }
 
 /// Set pin for an interrupt
-pub fn set_pin_interrupt(p: &Peripherals, channel: u8, port: u8, bitpos: u32, sense: Sense, event: Event) {
+pub fn set_pin_interrupt(p: &Peripherals, channel: u8, port: Port, bitpos: u32, sense: Sense, event: Event) {
+
+    // Calculate offset based on port
+    let offset: u32;
+    match port {
+        Port::Port0 => {
+            offset = 0u32;
+        }
+        Port::Port1 => {
+            offset = 24u32;
+        }
+    }
+
     match channel {
         0 => {
-            or_reg!(p.SYSCON.pintsel0, bitpos+24u32);
+            or_reg!(p.SYSCON.pintsel0, bitpos+offset);
             p.NVIC.enable(PIN_INT0);
         }
         1 => {
-            or_reg!(p.SYSCON.pintsel1, bitpos+24u32);
+            or_reg!(p.SYSCON.pintsel1, bitpos+offset);
             p.NVIC.enable(PIN_INT1);
         }
         2 => {
-            or_reg!(p.SYSCON.pintsel2, bitpos+24u32);
+            or_reg!(p.SYSCON.pintsel2, bitpos+offset);
             p.NVIC.enable(PIN_INT2);
         }
         3 => {
-            or_reg!(p.SYSCON.pintsel3, bitpos+24u32);
+            or_reg!(p.SYSCON.pintsel3, bitpos+offset);
             p.NVIC.enable(PIN_INT3);
         }
         4 => {
-            or_reg!(p.SYSCON.pintsel4, bitpos+24u32);
+            or_reg!(p.SYSCON.pintsel4, bitpos+offset);
             p.NVIC.enable(PIN_INT4);
         }
         5 => {
-            or_reg!(p.SYSCON.pintsel5, bitpos+24u32);
+            or_reg!(p.SYSCON.pintsel5, bitpos+offset);
             p.NVIC.enable(PIN_INT5);
         }
         6 => {
-            or_reg!(p.SYSCON.pintsel6, bitpos+24u32);
+            or_reg!(p.SYSCON.pintsel6, bitpos+offset);
             p.NVIC.enable(PIN_INT6);
         }
         7 => {
-            or_reg!(p.SYSCON.pintsel7, bitpos+24u32);
+            or_reg!(p.SYSCON.pintsel7, bitpos+offset);
             p.NVIC.enable(PIN_INT7);
         }
         
