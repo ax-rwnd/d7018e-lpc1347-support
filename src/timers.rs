@@ -104,10 +104,10 @@ pub fn set_interrupt(p: &Peripherals, timer: Timer16, mr: MatchReg, enabled: boo
 pub fn set_enabled(p: &lpc1347::Peripherals, timer: Timer16, enabled: bool) {
     match timer {
         Timer16::Timer0 => {
-            p.CT16B0.tcr.write(|w| w.cen().bit(enabled));
+            p.CT16B0.tcr.modify(|_, w| w.cen().bit(enabled));
         }
         Timer16::Timer1 => {
-            p.CT16B1.tcr.write(|w| w.cen().bit(enabled));
+            p.CT16B1.tcr.modify(|_, w| w.cen().bit(enabled));
         }
     }
 }
@@ -136,16 +136,16 @@ pub unsafe fn set_match(p: &lpc1347::Peripherals, timer: Timer16, reg: MatchReg,
         Timer16::Timer0 => {
             match reg {
                 MatchReg::Reg0 => {
-                    p.CT16B0.mr0.write(|w| w.match_reg().bits(value));
+                    p.CT16B0.mr0.modify(|_, w| w.match_reg().bits(value));
                 }
                 MatchReg::Reg1 => {
-                    p.CT16B0.mr1.write(|w| w.match_reg().bits(value));
+                    p.CT16B0.mr1.modify(|_, w| w.match_reg().bits(value));
                 }
                 MatchReg::Reg2 => {
-                    p.CT16B0.mr2.write(|w| w.match_reg().bits(value));
+                    p.CT16B0.mr2.modify(|_, w| w.match_reg().bits(value));
                 }
                 MatchReg::Reg3 => {
-                    p.CT16B0.mr3.write(|w| w.match_reg().bits(value));
+                    p.CT16B0.mr3.modify(|_, w| w.match_reg().bits(value));
                 }
             }
         }
@@ -153,16 +153,16 @@ pub unsafe fn set_match(p: &lpc1347::Peripherals, timer: Timer16, reg: MatchReg,
         Timer16::Timer1 => {
             match reg {
                 MatchReg::Reg0 => {
-                    p.CT16B1.mr0.write(|w| w.match_reg().bits(value));
+                    p.CT16B1.mr0.modify(|_, w| w.match_reg().bits(value));
                 }
                 MatchReg::Reg1 => {
-                    p.CT16B1.mr1.write(|w| w.match_reg().bits(value));
+                    p.CT16B1.mr1.modify(|_, w| w.match_reg().bits(value));
                 }
                 MatchReg::Reg2 => {
-                    p.CT16B1.mr2.write(|w| w.match_reg().bits(value));
+                    p.CT16B1.mr2.modify(|_, w| w.match_reg().bits(value));
                 }
                 MatchReg::Reg3 => {
-                    p.CT16B1.mr3.write(|w| w.match_reg().bits(value));
+                    p.CT16B1.mr3.modify(|_, w| w.match_reg().bits(value));
                 }
             }
         }
@@ -212,7 +212,7 @@ pub fn set_pwm(p: &Peripherals, timer: Timer16, m0: u16, m1: u16, m2: u16, m3: u
             }
 
             // Reset on clock 0 -> period
-            p.CT16B0.mcr.write(|w| w.mr0r().bit(true));
+            p.CT16B0.mcr.modify(|_, w| w.mr0r().bit(true));
         }
 
         Timer16::Timer1 => {
@@ -242,7 +242,7 @@ pub fn set_pwm(p: &Peripherals, timer: Timer16, m0: u16, m1: u16, m2: u16, m3: u
             }
 
             // Reset on clock 0 -> period
-            p.CT16B1.mcr.write(|w| w.mr0r().bit(true));
+            p.CT16B1.mcr.modify(|_, w| w.mr0r().bit(true));
 
         }
     }

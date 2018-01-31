@@ -9,7 +9,8 @@ use lpc1347::Interrupt::{PIN_INT0, PIN_INT1, PIN_INT2, PIN_INT3, PIN_INT4, PIN_I
 macro_rules! write_reg {
     ($field:expr, $bitpos:expr, $value:expr) => {{
        unsafe {
-           $field.write(|w| w.bits($value << $bitpos));
+           //$field.write(|w| w.bits($value << $bitpos));
+           $field.modify(|_, w| w.bits($value << $bitpos));
        }
     }};
 }
