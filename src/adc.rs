@@ -64,6 +64,7 @@ pub fn set_adc_pins(p: &lpc1347::Peripherals, pin: PinPos) {
 
 /// Read from the ADC at some channel
 pub fn read(p: &lpc1347::Peripherals, channel: u8) -> u32 {
+    // TODO: yet to implement 10-bit mode and low-power mode
     if channel > 7 {
         panic!("invalid channel selected")
     }

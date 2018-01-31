@@ -5,7 +5,7 @@ use lpc1347::Peripherals;
 use lpc1347::Interrupt::USART;
 
 const BUFFER_SIZE: usize = 1024;
-static uart_pcb: Pcb = Pcb{initialized: false,
+static UART_PCB: Pcb = Pcb{initialized: false,
                             baud_rate: 0,
                             status: 0,
                             tx_data: 0,
