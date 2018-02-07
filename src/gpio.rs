@@ -69,15 +69,15 @@ pub enum Event {
 }
 
 /// Initialize the GPIO ports
-pub fn init(p: &lpc1347::Peripherals) {
-    p.SYSCON.sysahbclkctrl.modify(|_, w| w.gpio().bit(true));
-    p.SYSCON.sysahbclkctrl.modify(|_, w| w.pint().bit(true));
-    p.SYSCON.sysahbclkctrl.modify(|_, w| w.group0int().bit(true));
-    p.SYSCON.sysahbclkctrl.modify(|_, w| w.group1int().bit(true));
+pub fn init(syscon: &lpc1347::SYSCON) {
+    syscon.sysahbclkctrl.modify(|_, w| w.gpio().bit(true));
+    syscon.sysahbclkctrl.modify(|_, w| w.pint().bit(true));
+    syscon.sysahbclkctrl.modify(|_, w| w.group0int().bit(true));
+    syscon.sysahbclkctrl.modify(|_, w| w.group1int().bit(true));
 }
 
 /// Set pin for an interrupt
-pub fn set_pin_interrupt(p: &Peripherals, channel: u8, port: Port, bitpos: u32, sense: Sense, event: Event) {
+pub fn set_pin_interrupt(syscon: &lpc1347::SYSCON, nvic: &lpc1347::NVIC, gpio_pin_int: &lpc1347::GPIO_PIN_INT, channel: u8, port: Port, bitpos: u32, sense: Sense, event: Event) {
 
     // Calculate offset based on port
     let offset: u32;
@@ -92,36 +92,36 @@ pub fn set_pin_interrupt(p: &Peripherals, channel: u8, port: Port, bitpos: u32, 
 
     match channel {
         0 => {
-            or_reg!(p.SYSCON.pintsel0, bitpos+offset);
-            p.NVIC.enable(PIN_INT0);
+            or_reg!(syscon.pintsel0, bitpos+offset);
+            nvic.enable(PIN_INT0);
         }
         1 => {
-            or_reg!(p.SYSCON.pintsel1, bitpos+offset);
-            p.NVIC.enable(PIN_INT1);
+            or_reg!(syscon.pintsel1, bitpos+offset);
+            nvic.enable(PIN_INT1);
         }
         2 => {
-            or_reg!(p.SYSCON.pintsel2, bitpos+offset);
-            p.NVIC.enable(PIN_INT2);
+            or_reg!(syscon.pintsel2, bitpos+offset);
+            nvic.enable(PIN_INT2);
         }
         3 => {
-            or_reg!(p.SYSCON.pintsel3, bitpos+offset);
-            p.NVIC.enable(PIN_INT3);
+            or_reg!(syscon.pintsel3, bitpos+offset);
+            nvic.enable(PIN_INT3);
         }
         4 => {
-            or_reg!(p.SYSCON.pintsel4, bitpos+offset);
-            p.NVIC.enable(PIN_INT4);
+            or_reg!(syscon.pintsel4, bitpos+offset);
+            nvic.enable(PIN_INT4);
         }
         5 => {
-            or_reg!(p.SYSCON.pintsel5, bitpos+offset);
-            p.NVIC.enable(PIN_INT5);
+            or_reg!(syscon.pintsel5, bitpos+offset);
+            nvic.enable(PIN_INT5);
         }
         6 => {
-            or_reg!(p.SYSCON.pintsel6, bitpos+offset);
-            p.NVIC.enable(PIN_INT6);
+            or_reg!(syscon.pintsel6, bitpos+offset);
+            nvic.enable(PIN_INT6);
         }
         7 => {
-            or_reg!(p.SYSCON.pintsel7, bitpos+offset);
-            p.NVIC.enable(PIN_INT7);
+            or_reg!(syscon.pintsel7, bitpos+offset);
+            nvic.enable(PIN_INT7);
         }
         
         _ => {
@@ -132,35 +132,35 @@ pub fn set_pin_interrupt(p: &Peripherals, channel: u8, port: Port, bitpos: u32, 
     // Either use edge detection or level detection
     match sense {
         Sense::Edge => {
-            neg_and_reg!(&p.GPIO_PIN_INT.isel, channel, 1);
+            neg_and_reg!(&gpio_pin_int.isel, channel, 1);
             
             match event {
                 Event::Falling => {
-                    or_reg!(&p.GPIO_PIN_INT.ienf, channel, 1);
+                    or_reg!(&gpio_pin_int.ienf, channel, 1);
                 }
                 Event::Rising => {
-                    or_reg!(&p.GPIO_PIN_INT.ienr, channel, 1);
+                    or_reg!(&gpio_pin_int.ienr, channel, 1);
                 }
 
                 _ => {
-                    panic!("invalid combinaiton for sense and event, use Event::Falling or Event::Rising here")
+                    panic!("invalid combination for sense and event, use Event::Falling or Event::Rising here")
                 }
             }
         }
 
         Sense::Level => {
-            or_reg!(&p.GPIO_PIN_INT.isel, channel, 1);
-            or_reg!(&p.GPIO_PIN_INT.ienr, channel, 1);
+            or_reg!(&gpio_pin_int.isel, channel, 1);
+            or_reg!(&gpio_pin_int.ienr, channel, 1);
 
             match event {
                 Event::Low => {
-                    neg_and_reg!(&p.GPIO_PIN_INT.ienf, channel, 1);
+                    neg_and_reg!(&gpio_pin_int.ienf, channel, 1);
                 }
                 Event::High => {
-                    or_reg!(&p.GPIO_PIN_INT.ienf, channel, 1);
+                    or_reg!(&gpio_pin_int.ienf, channel, 1);
                 }
                 _ => {
-                    panic!("invalid combinaiton for sense and event, use Event::Low or Event::High here")
+                    panic!("invalid combination for sense and event, use Event::Low or Event::High here")
                 }
             }
         }
@@ -173,9 +173,9 @@ pub fn get_status(p: &Peripherals, channel: u8) -> bool {
 }
 
 /// Clear the pin interrupt status
-pub fn clear_status(p: &Peripherals, channel: u8) {
-    if p.GPIO_PIN_INT.isel.read().bits() & (1<<channel) == 0 {
-        write_reg!(&p.GPIO_PIN_INT.ist, channel, 1u32);
+pub fn clear_status(gpio_pin_int: &lpc1347::GPIO_PIN_INT, channel: u8) {
+    if gpio_pin_int.isel.read().bits() & (1<<channel) == 0 {
+        write_reg!(&gpio_pin_int.ist, channel, 1u32);
     }
 }
 
@@ -184,44 +184,44 @@ pub fn set_grouped_interrupt() {
 }
 
 /// Get current state of the pin
-pub fn get_pin_value(p: &Peripherals, port: Port, bitpos: u32) -> u32 {
+pub fn get_pin_value(gpio_port: &lpc1347::GPIO_PORT, port: Port, bitpos: u32) -> u32 {
     match port {
         Port::Port0 => {
-            return p.GPIO_PORT.set0.read().bits() & (1<<bitpos);
+            return gpio_port.set0.read().bits() & (1<<bitpos);
         }
         Port::Port1 => {
-            return p.GPIO_PORT.set1.read().bits() & (1<<bitpos);
+            return gpio_port.set1.read().bits() & (1<<bitpos);
         }
     }
 }
 
 /// Set value for pin
-pub fn set_pin_value(p: &Peripherals, port: Port, bitpos: u32, value: bool) {
+pub fn set_pin_value(gpio_port: &lpc1347::GPIO_PORT, port: Port, bitpos: u32, value: bool) {
     match port {
         Port::Port0 => {
-            write_reg!(p.GPIO_PORT.set0, bitpos, if value {1} else {0});
+            write_reg!(gpio_port.set0, bitpos, if value {1} else {0});
         }
         Port::Port1 => {
-            write_reg!(p.GPIO_PORT.set1, bitpos, if value {1} else {0});
+            write_reg!(gpio_port.set1, bitpos, if value {1} else {0});
         }
     }
 }
 
 /// Set pin direction
-pub fn set_dir(p: &Peripherals, port: Port, bitpos: u32, output: bool) {
+pub fn set_dir(gpio_port: &lpc1347::GPIO_PORT, port: Port, bitpos: u32, output: bool) {
     match port {
         Port::Port0 => {
             if output {
-                or_reg!(p.GPIO_PORT.dir0, bitpos, 1);
+                or_reg!(gpio_port.dir0, bitpos, 1);
             } else {
-                neg_and_reg!(p.GPIO_PORT.dir0, bitpos, 0);
+                neg_and_reg!(gpio_port.dir0, bitpos, 0);
             }
         }
         Port::Port1 => {
             if output {
-                or_reg!(p.GPIO_PORT.dir1, bitpos, 1);
+                or_reg!(gpio_port.dir1, bitpos, 1);
             } else {
-                neg_and_reg!(p.GPIO_PORT.dir1, bitpos, 0);
+                neg_and_reg!(gpio_port.dir1, bitpos, 0);
             }
         }
     }

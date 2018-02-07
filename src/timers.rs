@@ -35,48 +35,48 @@ pub enum MatchReg {
 */
 
 /// Initialize 16-bit timers
-pub fn init(p: &lpc1347::Peripherals, timer: Timer16) {
+pub fn init(syscon: &lpc1347::SYSCON, nvic: &lpc1347::NVIC, timer: Timer16) {
     match timer {
         Timer16::Timer0 => {
-            p.SYSCON.sysahbclkctrl.modify(|_, w| w.ct16b0().bit(true));
+            syscon.sysahbclkctrl.modify(|_, w| w.ct16b0().bit(true));
 
             unsafe {
                 T16_0_COUNTER = [0u8,0u8,0u8,0u8];
                 T16_0_CAPTURE = [0u8,0u8,0u8,0u8];
             }
 
-            p.NVIC.enable(CT16B0);
+            nvic.enable(CT16B0);
         }
         Timer16::Timer1 => {
-            p.SYSCON.sysahbclkctrl.modify(|_, w| w.ct16b1().bit(true));
+            syscon.sysahbclkctrl.modify(|_, w| w.ct16b1().bit(true));
 
             unsafe {
                 T16_1_COUNTER = [0u8,0u8,0u8,0u8];
                 T16_1_CAPTURE = [0u8,0u8,0u8,0u8];
             }
 
-            p.NVIC.enable(CT16B1);
+            nvic.enable(CT16B1);
         }
     }
 }
 
 /// Enable or disable interrupts for a timer
-pub fn set_interrupt(p: &Peripherals, timer: Timer16, mr: MatchReg, enabled: bool) {
+pub fn set_interrupt(ct16b0: &lpc1347::CT16B0, ct16b1: &lpc1347::CT16B1, timer: Timer16, mr: MatchReg, enabled: bool) {
     match timer {
         Timer16::Timer0 => {
             match mr {
                 MatchReg::Reg0 => {
-                    p.CT16B0.mcr.modify(|_, w| w.mr0i().bit(enabled));
-                    p.CT16B0.mcr.modify(|_, w| w.mr0r().bit(enabled));
+                    ct16b0.mcr.modify(|_, w| w.mr0i().bit(enabled));
+                    ct16b0.mcr.modify(|_, w| w.mr0r().bit(enabled));
                 }
                 MatchReg::Reg1 => {
-                    p.CT16B0.mcr.modify(|_, w| w.mr1i().bit(enabled));
+                    ct16b0.mcr.modify(|_, w| w.mr1i().bit(enabled));
                 }
                 MatchReg::Reg2 => {
-                    p.CT16B0.mcr.modify(|_, w| w.mr2i().bit(enabled));
+                    ct16b0.mcr.modify(|_, w| w.mr2i().bit(enabled));
                 }
                 MatchReg::Reg3 => {
-                    p.CT16B0.mcr.modify(|_, w| w.mr3i().bit(enabled));
+                    ct16b0.mcr.modify(|_, w| w.mr3i().bit(enabled));
                 }
             }
         }
@@ -84,16 +84,16 @@ pub fn set_interrupt(p: &Peripherals, timer: Timer16, mr: MatchReg, enabled: boo
         Timer16::Timer1 => {
             match mr {
                 MatchReg::Reg0 => {
-                    p.CT16B1.mcr.modify(|_, w| w.mr0i().bit(enabled));
+                    ct16b1.mcr.modify(|_, w| w.mr0i().bit(enabled));
                 }
                 MatchReg::Reg1 => {
-                    p.CT16B1.mcr.modify(|_, w| w.mr1i().bit(enabled));
+                    ct16b1.mcr.modify(|_, w| w.mr1i().bit(enabled));
                 }
                 MatchReg::Reg2 => {
-                    p.CT16B1.mcr.modify(|_, w| w.mr2i().bit(enabled));
+                    ct16b1.mcr.modify(|_, w| w.mr2i().bit(enabled));
                 }
                 MatchReg::Reg3 => {
-                    p.CT16B1.mcr.modify(|_, w| w.mr3i().bit(enabled));
+                    ct16b1.mcr.modify(|_, w| w.mr3i().bit(enabled));
                 }
             }
         }
@@ -101,26 +101,26 @@ pub fn set_interrupt(p: &Peripherals, timer: Timer16, mr: MatchReg, enabled: boo
 }
 
 /// Enable or disable 16-bit timers
-pub fn set_enabled(p: &lpc1347::Peripherals, timer: Timer16, enabled: bool) {
+pub fn set_enabled(ct16b0: &lpc1347::CT16B0, ct16b1: &lpc1347::CT16B1, timer: Timer16, enabled: bool) {
     match timer {
         Timer16::Timer0 => {
-            p.CT16B0.tcr.modify(|_, w| w.cen().bit(enabled));
+            ct16b0.tcr.modify(|_, w| w.cen().bit(enabled));
         }
         Timer16::Timer1 => {
-            p.CT16B1.tcr.modify(|_, w| w.cen().bit(enabled));
+            ct16b1.tcr.modify(|_, w| w.cen().bit(enabled));
         }
     }
 }
 
 /// Reset a 16-bit timer
-pub fn reset(p: &lpc1347::Peripherals, timer: Timer16) {
+pub fn reset(ct16b0: &lpc1347::CT16B0, ct16b1: &lpc1347::CT16B1, timer: Timer16) {
     // TODO: these should write 0x02, but that's reserved?
     match timer {
         Timer16::Timer0 => {
-            p.CT16B0.tcr.modify(|_, w| w.crst().bit(true));
+            ct16b0.tcr.modify(|_, w| w.crst().bit(true));
         }
         Timer16::Timer1 => {
-            p.CT16B1.tcr.modify(|_, w| w.crst().bit(true));
+            ct16b1.tcr.modify(|_, w| w.crst().bit(true));
         }
     }
 }
@@ -131,21 +131,21 @@ pub fn delay_ticks(_p: &Peripherals, _timer: Timer16, _delay: u16) {
 }
 
 /// Set the match register
-pub unsafe fn set_match(p: &lpc1347::Peripherals, timer: Timer16, reg: MatchReg, value: u16) {
+pub unsafe fn set_match(ct16b0: &lpc1347::CT16B0, ct16b1: &lpc1347::CT16B1, timer: Timer16, reg: MatchReg, value: u16) {
     match timer {
         Timer16::Timer0 => {
             match reg {
                 MatchReg::Reg0 => {
-                    p.CT16B0.mr0.modify(|_, w| w.match_reg().bits(value));
+                    ct16b0.mr0.modify(|_, w| w.match_reg().bits(value));
                 }
                 MatchReg::Reg1 => {
-                    p.CT16B0.mr1.modify(|_, w| w.match_reg().bits(value));
+                    ct16b0.mr1.modify(|_, w| w.match_reg().bits(value));
                 }
                 MatchReg::Reg2 => {
-                    p.CT16B0.mr2.modify(|_, w| w.match_reg().bits(value));
+                    ct16b0.mr2.modify(|_, w| w.match_reg().bits(value));
                 }
                 MatchReg::Reg3 => {
-                    p.CT16B0.mr3.modify(|_, w| w.match_reg().bits(value));
+                    ct16b0.mr3.modify(|_, w| w.match_reg().bits(value));
                 }
             }
         }
@@ -153,16 +153,16 @@ pub unsafe fn set_match(p: &lpc1347::Peripherals, timer: Timer16, reg: MatchReg,
         Timer16::Timer1 => {
             match reg {
                 MatchReg::Reg0 => {
-                    p.CT16B1.mr0.modify(|_, w| w.match_reg().bits(value));
+                    ct16b1.mr0.modify(|_, w| w.match_reg().bits(value));
                 }
                 MatchReg::Reg1 => {
-                    p.CT16B1.mr1.modify(|_, w| w.match_reg().bits(value));
+                    ct16b1.mr1.modify(|_, w| w.match_reg().bits(value));
                 }
                 MatchReg::Reg2 => {
-                    p.CT16B1.mr2.modify(|_, w| w.match_reg().bits(value));
+                    ct16b1.mr2.modify(|_, w| w.match_reg().bits(value));
                 }
                 MatchReg::Reg3 => {
-                    p.CT16B1.mr3.modify(|_, w| w.match_reg().bits(value));
+                    ct16b1.mr3.modify(|_, w| w.match_reg().bits(value));
                 }
             }
         }
@@ -182,67 +182,67 @@ pub unsafe fn set_prescaler(p: &Peripherals, timer: Timer16, value: u16) {
 }
 
 /// Setup a clock to be used for PWM
-pub fn set_pwm(p: &Peripherals, timer: Timer16, m0: u16, m1: u16, m2: u16, m3: u16) {
+pub fn set_pwm(syscon: &lpc1347::SYSCON, ct16b0: &lpc1347::CT16B0, ct16b1: &lpc1347::CT16B1, timer: Timer16, m0: u16, m1: u16, m2: u16, m3: u16) {
     match timer {
         Timer16::Timer0 => {
 
-            set_enabled(&p, timer, false);
-            p.SYSCON.sysahbclkctrl.modify(|_, w| w.ct16b0().bit(true));
+            set_enabled(&ct16b0, &ct16b1, timer, false);
+            syscon.sysahbclkctrl.modify(|_, w| w.ct16b0().bit(true));
 
-            p.CT16B0.emr.modify(|_, w| w.emc3().bits(0x1));
-            p.CT16B0.emr.modify(|_, w| w.emc2().bits(0x1));
-            p.CT16B0.emr.modify(|_, w| w.emc1().bits(0x1));
-            p.CT16B0.emr.modify(|_, w| w.emc0().bits(0x1));
+            ct16b0.emr.modify(|_, w| w.emc3().bits(0x1));
+            ct16b0.emr.modify(|_, w| w.emc2().bits(0x1));
+            ct16b0.emr.modify(|_, w| w.emc1().bits(0x1));
+            ct16b0.emr.modify(|_, w| w.emc0().bits(0x1));
 
-            p.CT16B0.emr.modify(|_, w| w.em3().bit(false));
-            p.CT16B0.emr.modify(|_, w| w.em2().bit(false));
-            p.CT16B0.emr.modify(|_, w| w.em1().bit(true));
-            p.CT16B0.emr.modify(|_, w| w.em0().bit(true));
+            ct16b0.emr.modify(|_, w| w.em3().bit(false));
+            ct16b0.emr.modify(|_, w| w.em2().bit(false));
+            ct16b0.emr.modify(|_, w| w.em1().bit(true));
+            ct16b0.emr.modify(|_, w| w.em0().bit(true));
 
-            p.CT16B0.pwmc.modify(|_, w| w.pwmen3().bit(false));
-            p.CT16B0.pwmc.modify(|_, w| w.pwmen2().bit(false));
-            p.CT16B0.pwmc.modify(|_, w| w.pwmen1().bit(true));
-            p.CT16B0.pwmc.modify(|_, w| w.pwmen0().bit(true));
+            ct16b0.pwmc.modify(|_, w| w.pwmen3().bit(false));
+            ct16b0.pwmc.modify(|_, w| w.pwmen2().bit(false));
+            ct16b0.pwmc.modify(|_, w| w.pwmen1().bit(true));
+            ct16b0.pwmc.modify(|_, w| w.pwmen0().bit(true));
 
             unsafe {
-                set_match(&p, Timer16::Timer0, MatchReg::Reg0, m0);
-                set_match(&p, Timer16::Timer0, MatchReg::Reg1, m1);
-                set_match(&p, Timer16::Timer0, MatchReg::Reg2, m2);
-                set_match(&p, Timer16::Timer0, MatchReg::Reg3, m3);
+                set_match(&ct16b0, &ct16b1, Timer16::Timer0, MatchReg::Reg0, m0);
+                set_match(&ct16b0, &ct16b1, Timer16::Timer0, MatchReg::Reg1, m1);
+                set_match(&ct16b0, &ct16b1, Timer16::Timer0, MatchReg::Reg2, m2);
+                set_match(&ct16b0, &ct16b1, Timer16::Timer0, MatchReg::Reg3, m3);
             }
 
             // Reset on clock 0 -> period
-            p.CT16B0.mcr.modify(|_, w| w.mr0r().bit(true));
+            ct16b0.mcr.modify(|_, w| w.mr0r().bit(true));
         }
 
         Timer16::Timer1 => {
-            set_enabled(&p, timer, false);
-            p.SYSCON.sysahbclkctrl.modify(|_, w| w.ct16b0().bit(true));
+            set_enabled(&ct16b0, &ct16b1, timer, false);
+            syscon.sysahbclkctrl.modify(|_, w| w.ct16b0().bit(true));
 
-            p.CT16B1.emr.modify(|_, w| w.emc3().bits(0x1));
-            p.CT16B1.emr.modify(|_, w| w.emc2().bits(0x1));
-            p.CT16B1.emr.modify(|_, w| w.emc1().bits(0x1));
-            p.CT16B1.emr.modify(|_, w| w.emc0().bits(0x1));
+            ct16b1.emr.modify(|_, w| w.emc3().bits(0x1));
+            ct16b1.emr.modify(|_, w| w.emc2().bits(0x1));
+            ct16b1.emr.modify(|_, w| w.emc1().bits(0x1));
+            ct16b1.emr.modify(|_, w| w.emc0().bits(0x1));
 
-            p.CT16B1.emr.modify(|_, w| w.em3().bit(false));
-            p.CT16B1.emr.modify(|_, w| w.em2().bit(false));
-            p.CT16B1.emr.modify(|_, w| w.em1().bit(true));
-            p.CT16B1.emr.modify(|_, w| w.em0().bit(true));
+            ct16b1.emr.modify(|_, w| w.em3().bit(false));
+            ct16b1.emr.modify(|_, w| w.em2().bit(false));
+            ct16b1.emr.modify(|_, w| w.em1().bit(true));
+            ct16b1.emr.modify(|_, w| w.em0().bit(true));
 
-            p.CT16B1.pwmc.modify(|_, w| w.pwmen3().bit(false));
-            p.CT16B1.pwmc.modify(|_, w| w.pwmen2().bit(false));
-            p.CT16B1.pwmc.modify(|_, w| w.pwmen1().bit(true));
-            p.CT16B1.pwmc.modify(|_, w| w.pwmen0().bit(true));
+            ct16b1.pwmc.modify(|_, w| w.pwmen3().bit(false));
+            ct16b1.pwmc.modify(|_, w| w.pwmen2().bit(false));
+            ct16b1.pwmc.modify(|_, w| w.pwmen1().bit(true));
+            ct16b1.pwmc.modify(|_, w| w.pwmen0().bit(true));
 
             unsafe {
-                set_match(&p, Timer16::Timer1, MatchReg::Reg0, m0);
-                set_match(&p, Timer16::Timer1, MatchReg::Reg1, m1);
-                set_match(&p, Timer16::Timer1, MatchReg::Reg2, m2);
-                set_match(&p, Timer16::Timer1, MatchReg::Reg3, m3);
+                set_match(&ct16b0, &ct16b1, Timer16::Timer1, MatchReg::Reg0, m0);
+                set_match(&ct16b0, &ct16b1, Timer16::Timer1, MatchReg::Reg1, m1);
+                set_match(&ct16b0, &ct16b1, Timer16::Timer1, MatchReg::Reg2, m2);
+                set_match(&ct16b0, &ct16b1, Timer16::Timer1, MatchReg::Reg3, m3);
             }
 
             // Reset on clock 0 -> period
-            p.CT16B1.mcr.modify(|_, w| w.mr0r().bit(true));
+            ct16b1.mcr.modify(|_, w| w.mr0r().bit(true));
 
         }
     }

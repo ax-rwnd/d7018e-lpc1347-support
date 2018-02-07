@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 extern crate lpc1347;
-use lpc1347::Peripherals;
 use lpc1347::Interrupt::USART;
 
 const BUFFER_SIZE: usize = 1024;
@@ -72,7 +71,7 @@ pub fn init(p: &lpc1347::Peripherals, baudrate: u32, flow_control: bool) {
     // Setup baud rate
     {
         let register_value: u32 = p.SYSCON.uartclkdiv.read().div().bits() as u32;
-        let fdiv: u32 = (((12000u32 / register_value) / 16u32) / baudrate as u32);
+        let fdiv: u32 = ((12000u32 / register_value) / 16u32) / baudrate as u32;
         unsafe {
             p.USART.dlm.modify(|_, w| w.dlmsb().bits((fdiv / 256u32) as u8));
             // TODO: what? DLL seems to be broken ... somehow?
