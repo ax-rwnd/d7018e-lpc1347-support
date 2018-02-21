@@ -69,15 +69,32 @@ pub enum Event {
 }
 
 /// Initialize the GPIO ports
-pub fn init(syscon: &lpc1347::SYSCON) {
+///
+/// # Arguments
+/// * `group0` - Enable or disable group 0 interrupts
+/// * `group1` - Enable or disable group 1 interrupts
+pub fn init(syscon: &lpc1347::SYSCON, group0: bool, group1: bool) {
+    // Start clocks
+    syscon.sysahbclkctrl.modify(|_, w| w.iocon().bit(true));
     syscon.sysahbclkctrl.modify(|_, w| w.gpio().bit(true));
     syscon.sysahbclkctrl.modify(|_, w| w.pint().bit(true));
-    syscon.sysahbclkctrl.modify(|_, w| w.group0int().bit(true));
-    syscon.sysahbclkctrl.modify(|_, w| w.group1int().bit(true));
+
+    // Enable grouped interrupts
+    syscon.sysahbclkctrl.modify(|_, w| w.group0int().bit(group0));
+    syscon.sysahbclkctrl.modify(|_, w| w.group1int().bit(group1));
 }
 
 /// Set pin for an interrupt
-pub fn set_pin_interrupt(syscon: &lpc1347::SYSCON, nvic: &lpc1347::NVIC, gpio_pin_int: &lpc1347::GPIO_PIN_INT, channel: u8, port: Port, bitpos: u32, sense: Sense, event: Event) {
+///
+/// # Arguments
+/// * `channel` - The target channel for the interrupt
+/// * `port` - Which port (0/1) of pins to use
+/// * `bitpos` - Which pin to use
+/// * `sense` - Sense on edge or level when generating interrupts
+/// * `event` - Trigger on falling/rising or high/low
+pub fn set_pin_interrupt(syscon: &lpc1347::SYSCON, nvic: &lpc1347::NVIC,
+                        gpio_pin_int: &lpc1347::GPIO_PIN_INT, channel: u8,
+                        port: Port, bitpos: u32, sense: Sense, event: Event) {
 
     // Calculate offset based on port
     let offset: u32;
@@ -208,6 +225,11 @@ pub fn set_pin_value(gpio_port: &lpc1347::GPIO_PORT, port: Port, bitpos: u32, va
 }
 
 /// Set pin direction
+///
+/// # Arguments
+/// * `port` - Which port (0/1) of pins to use
+/// * `bitpos` - The pin number to use
+/// * `output`- Whether it should be an output pin (true) or an input pin (false)
 pub fn set_dir(gpio_port: &lpc1347::GPIO_PORT, port: Port, bitpos: u32, output: bool) {
     match port {
         Port::Port0 => {

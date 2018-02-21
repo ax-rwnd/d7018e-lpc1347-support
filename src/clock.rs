@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-
 extern crate lpc1347;
 
 /// Configure the phase-locked-loop
@@ -42,4 +41,18 @@ pub unsafe fn pll_init (syscon: &lpc1347::SYSCON, mval: u8, pval: u8) {
     while !syscon.syspllstat.read().lock().bit() {}
     syscon.mainclksel.modify(|_, w| w.sel().bits(0x3));
     syscon.clkoutsel.modify(|_, w| w.sel().bits(0x3));
+
+}
+
+pub fn wwdt_init (syscon: &lpc1347::SYSCON, wwdt: &lpc1347::WWDT, frequency: u8) {
+    if frequency > 0xF {
+        panic!("invalid frequency set!");
+    }
+
+    syscon.sysahbclkctrl.modify(|_, w| w.wwdt().bit(true));
+    syscon.pdruncfg.modify(|_, w| w.wdtosc_pd().bit(false));
+    wwdt.clksel.modify(|_, w| w.clksel().bit(true));
+    unsafe {
+        syscon.wdtoscctrl.modify(|_, w| w.freqsel().bits(frequency));
+    }
 }
