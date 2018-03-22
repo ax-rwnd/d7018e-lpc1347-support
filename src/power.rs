@@ -1,9 +1,10 @@
 #![allow(dead_code)]
-extern crate lpc1347;
 extern crate cortex_m;
 extern crate cortex_m_rtfm as rtfm;
+extern crate lpc1347;
 
-use lpc1347::Interrupt::{PIN_INT0, PIN_INT1, PIN_INT2, PIN_INT3, PIN_INT4, PIN_INT5, PIN_INT6, PIN_INT7, WWDT, BOD_IRQ, USBWAKEUP, GINT0, GINT1};
+use lpc1347::Interrupt::{GINT0, GINT1, PIN_INT0, PIN_INT1, PIN_INT2, PIN_INT3, PIN_INT4, PIN_INT5,
+                         PIN_INT6, PIN_INT7, BOD_IRQ, USBWAKEUP, WWDT};
 
 pub enum WakeupInts {
     Pin0,
@@ -18,7 +19,7 @@ pub enum WakeupInts {
     BOD,
     USBWAKEUP,
     GPIO0,
-    GPIO1
+    GPIO1,
 }
 
 /// Write deepsleep to the Cortex-M3
@@ -27,7 +28,7 @@ fn write_sleepdeep() {
     let cs = cortex_m::peripheral::SCB.get();
     unsafe {
         let rval = (*cs).scr.read();
-        (*cs).scr.write( rval | (1<<2) | (1<<1));
+        (*cs).scr.write(rval | (1 << 2) | (1 << 1));
     }
 }
 
@@ -44,14 +45,21 @@ fn write_sleepdeep() {
 ///     wfi();
 /// }
 /// ```
-pub fn deep_sleep(pmu: &lpc1347::PMU, syscon: &lpc1347::SYSCON, enable_bod: bool, enable_watchdog: bool) {
+pub fn deep_sleep(
+    pmu: &lpc1347::PMU,
+    syscon: &lpc1347::SYSCON,
+    enable_bod: bool,
+    enable_watchdog: bool,
+) {
     unsafe {
         pmu.pcon.modify(|_, w| w.pm().bits(0x1));
     }
 
     // Enable bod if you want low-voltage protection, WD if you nned timer-based wakeup
     syscon.pdsleepcfg.modify(|_, w| w.bod_pd().bit(!enable_bod));
-    syscon.pdsleepcfg.modify(|_, w| w.wdtosc_pd().bit(!enable_watchdog));
+    syscon
+        .pdsleepcfg
+        .modify(|_, w| w.wdtosc_pd().bit(!enable_watchdog));
 
     write_sleepdeep();
 }
@@ -70,7 +78,9 @@ pub fn power_down(pmu: &lpc1347::PMU, syscon: &lpc1347::SYSCON, bod: bool, watch
         pmu.pcon.modify(|_, w| w.pm().bits(0x2));
     }
     syscon.pdsleepcfg.modify(|_, w| w.bod_pd().bit(!bod));
-    syscon.pdsleepcfg.modify(|_, w| w.wdtosc_pd().bit(!watchdog_osc));
+    syscon
+        .pdsleepcfg
+        .modify(|_, w| w.wdtosc_pd().bit(!watchdog_osc));
 
     write_sleepdeep();
     rtfm::wfi();
@@ -105,51 +115,51 @@ pub fn set_wakeup_interrupt(syscon: &lpc1347::SYSCON, nvic: &lpc1347::NVIC, inte
         WakeupInts::Pin0 => {
             syscon.starterp0.modify(|_, w| w.pint0().bit(true));
             nvic.enable(PIN_INT0);
-        },
+        }
         WakeupInts::Pin1 => {
             syscon.starterp0.modify(|_, w| w.pint1().bit(true));
             nvic.enable(PIN_INT1);
-        },
+        }
         WakeupInts::Pin2 => {
             syscon.starterp0.modify(|_, w| w.pint2().bit(true));
             nvic.enable(PIN_INT2);
-        },
+        }
         WakeupInts::Pin3 => {
             syscon.starterp0.modify(|_, w| w.pint3().bit(true));
             nvic.enable(PIN_INT3);
-        },
+        }
         WakeupInts::Pin4 => {
             syscon.starterp0.modify(|_, w| w.pint4().bit(true));
             nvic.enable(PIN_INT4);
-        },
+        }
         WakeupInts::Pin5 => {
             syscon.starterp0.modify(|_, w| w.pint5().bit(true));
             nvic.enable(PIN_INT5);
-        },
+        }
         WakeupInts::Pin6 => {
             syscon.starterp0.modify(|_, w| w.pint6().bit(true));
             nvic.enable(PIN_INT6);
-        },
+        }
         WakeupInts::Pin7 => {
             syscon.starterp0.modify(|_, w| w.pint7().bit(true));
             nvic.enable(PIN_INT7);
-        },
+        }
         WakeupInts::WWDT => {
             syscon.starterp1.modify(|_, w| w.wwdtint().bit(true));
             nvic.enable(WWDT);
-        },
+        }
         WakeupInts::BOD => {
             syscon.starterp1.modify(|_, w| w.bodint().bit(true));
             nvic.enable(BOD_IRQ);
-        },
+        }
         WakeupInts::USBWAKEUP => {
             syscon.starterp1.modify(|_, w| w.usb_wakeup().bit(true));
             nvic.enable(USBWAKEUP);
-        },
+        }
         WakeupInts::GPIO0 => {
             syscon.starterp1.modify(|_, w| w.gpioint0().bit(true));
             nvic.enable(GINT0);
-        },
+        }
         WakeupInts::GPIO1 => {
             syscon.starterp1.modify(|_, w| w.gpioint1().bit(true));
             nvic.enable(GINT1);

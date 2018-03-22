@@ -1,6 +1,9 @@
+[profile.dev]
+codegen-units = 1
+
 [package]
 name = "d7018e-lpc1347-support"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Axel Sundbom <axel-sundbom@hotmail.com>"]
 description = "Provides drivers and peripheral access for the NXP LPC1347"
 repository = "https://github.com/ax-rwnd/d7018e-lpc1347-support.git"
@@ -18,7 +21,7 @@ compiletest_rs = "0.2.8"
 
 [dev-dependencies.cortex-m-rt]
 features = ["abort-on-panic"]
-version = "=0.3.7"
+version = "^0.3.8"
 
 [dependencies.lpc1347]
 features = ["rt"]

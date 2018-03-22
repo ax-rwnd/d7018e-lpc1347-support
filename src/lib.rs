@@ -7,9 +7,11 @@
 #![no_std]
 
 pub extern crate lpc1347;
+//pub mod iap; -- Untested
 pub mod power;
 pub mod clock;
 pub mod gpio;
+pub mod ritimer;
 pub mod timers;
 pub mod timers32;
 pub mod uart;

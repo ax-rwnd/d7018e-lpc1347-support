@@ -13,13 +13,13 @@ pub enum PinPos {
     Pin4 = 15,
     Pin5 = 16,
     Pin6 = 22,
-    Pin7 = 23
+    Pin7 = 23,
 }
 
 #[derive(Copy, Clone)]
 pub enum Capture {
     Rising,
-    Falling
+    Falling,
 }
 
 /// Initialize the ADC
@@ -37,7 +37,15 @@ pub enum Capture {
 /// adc::init(&p.SYSCON, &p.ADC, 5u8, 48000000u32, false, false, Capture::Rising);
 /// adc::set_adc_pin(&p.IOCON, adc::PinPos::Pin5);
 /// ```
-pub fn init(syscon: &lpc1347::SYSCON, adc: &lpc1347::ADC, pinnum: u8, system_core_clock: u32, low_power: bool, mode10bit: bool, edge: Capture) {
+pub fn init(
+    syscon: &lpc1347::SYSCON,
+    adc: &lpc1347::ADC,
+    pinnum: u8,
+    system_core_clock: u32,
+    low_power: bool,
+    mode10bit: bool,
+    edge: Capture,
+) {
     // Disallow invalid pins
     if pinnum > 7 {
         panic!("invalid pin number initialized");
@@ -52,10 +60,12 @@ pub fn init(syscon: &lpc1347::SYSCON, adc: &lpc1347::ADC, pinnum: u8, system_cor
 
     unsafe {
         // Select channels
-        adc.cr.modify(|r, w| w.sel().bits(r.sel().bits() | 1 << pinnum));
+        adc.cr
+            .modify(|r, w| w.sel().bits(r.sel().bits() | 1 << pinnum));
 
         // Set ADC clock divider
-        adc.cr.modify(|_, w| w.clkdiv().bits(((system_core_clock / ADC_CLK) - 1) as u8));
+        adc.cr
+            .modify(|_, w| w.clkdiv().bits(((system_core_clock / ADC_CLK) - 1) as u8));
         //adc.cr.modify(|_, w| w.clkdiv().bits(160u8));
     }
 
@@ -72,13 +82,12 @@ pub fn init(syscon: &lpc1347::SYSCON, adc: &lpc1347::ADC, pinnum: u8, system_cor
     match edge {
         Capture::Rising => {
             adc.cr.modify(|_, w| w.edge().bit(false));
-        },
+        }
         Capture::Falling => {
             adc.cr.modify(|_, w| w.edge().bit(true));
         }
     }
 }
-
 
 /// Configure the board to read from pin ADn
 ///
@@ -143,7 +152,7 @@ pub fn read(adc: &lpc1347::ADC, channel: u8) -> u16 {
 
     // Start read on channel
     unsafe {
-        adc.cr.modify(|_, w| w.sel().bits(1<<channel));
+        adc.cr.modify(|_, w| w.sel().bits(1 << channel));
         adc.cr.modify(|_, w| w.start().bits(0x1));
     }
 
@@ -159,7 +168,7 @@ pub fn read(adc: &lpc1347::ADC, channel: u8) -> u16 {
             5 => register_value = adc.dr5.read(),
             6 => register_value = adc.dr6.read(),
             7 => register_value = adc.dr7.read(),
-            _ => panic!("invalid channel selected!")
+            _ => panic!("invalid channel selected!"),
         }
 
         if register_value.done().bit() {
